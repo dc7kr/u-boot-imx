@@ -118,7 +118,9 @@ static void save_env(struct fastboot_ptentry *ptn,
 	/* This could be a problem is there is an outstanding lock */
 	run_command(unlock, 0);
 #endif
+#if defined(CONFIG_CMD_SAVEENV) && !defined(CONFIG_ENV_IS_NOWHERE)
 	saveenv();
+#endif
 
 #ifdef CONFIG_CMD_NAND_LOCK_UNLOCK
 	run_command(lock, 0);
@@ -168,7 +170,9 @@ void save_parts_values(struct fastboot_ptentry *ptn,
 		run_command(unlock, 0);
 	}
 #endif
+#if defined(CONFIG_CMD_SAVEENV) && !defined(CONFIG_ENV_IS_NOWHERE)
 	saveenv();
+#endif
 
 #ifdef CONFIG_CMD_NAND_LOCK_UNLOCK
 	if (env_ptn)
@@ -420,7 +424,9 @@ static void save_env(struct fastboot_ptentry *ptn,
 		     char *var, char *val)
 {
 	setenv(var, val);
+#if defined(CONFIG_CMD_SAVEENV) && !defined(CONFIG_ENV_IS_NOWHERE)
 	saveenv();
+#endif
 }
 #endif
 
