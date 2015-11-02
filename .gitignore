@@ -1,0 +1,14 @@
+
+*.cmd
+*.o
+*.su
+
+arch/arm/lib/asm-offsets.s
+arch/arm/lib/lib.a
+board/freescale/imx/ddr/mx6q_4x_mt41j128.cfg.cfgtmp
+include/config/
+include/generated/
+lib/asm-offsets.s
+System.map
+u-boot
+u-boot.*
