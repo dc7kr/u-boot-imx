@@ -1100,6 +1100,8 @@ struct fastboot_ptentry *fastboot_flash_find_ptn(const char *name)
 {
 	unsigned int n;
 
+	/* L4B Martin: */
+	_fastboot_load_partitions();
 	for (n = 0; n < pcount; n++) {
 		/* Make sure a substring is not accepted */
 		if (strlen(name) == strlen(ptable[n].name)) {
