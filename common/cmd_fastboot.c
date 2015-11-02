@@ -1546,6 +1546,20 @@ void arch_preboot_os(void) __attribute__((weak, alias("__arch_preboot_os")));
 /* booti <addr> [ mmc0 | mmc1 [ <partition> ] ] */
 int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
+#ifdef CONFIG_CMDLINE_TAG
+#define CMDLINE_APPEND		"append"
+#define CMDLINE_APPEND_LEN	(ARRAY_SIZE(CMDLINE_APPEND) - 1)
+#define CMDLINE_OVERWRITE	"overwrite"
+#define CMDLINE_OVERWRITE_LEN	(ARRAY_SIZE(CMDLINE_OVERWRITE) - 1)
+	char *cmdline;
+	char cmdline_buf[COMMAND_LINE_SIZE];
+	char *cmdline_mode;
+#ifdef CONFIG_SERIAL_TAG
+	size_t cmdline_len;
+	struct tag_serialnr serialnr;
+#endif /* CONFIG_SERIAL_TAG */
+#endif /* CONFIG_CMDLINE_TAG */
+
 	unsigned addr = 0;
 	char *ptn = "boot";
 	int mmcc = -1;
@@ -1750,36 +1764,38 @@ int do_booti(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 #endif /*CONFIG_SECURE_BOOT*/
 
 #ifdef CONFIG_CMDLINE_TAG
-	char *commandline = getenv("bootargs");
-
-	/* If no bootargs env, just use hdr command line */
-	if (!commandline) {
-		commandline = (char *)hdr->cmdline;
-#ifdef CONFIG_SERIAL_TAG
-		char appended_cmd_line[FASTBOOT_BOOT_ARGS_SIZE];
-		struct tag_serialnr serialnr;
-		get_board_serial(&serialnr);
-		if (strlen((char *)hdr->cmdline) +
-			strlen("androidboot.serialno") + 17 < FASTBOOT_BOOT_ARGS_SIZE) {
-			sprintf(appended_cmd_line,
-							"%s androidboot.serialno=%08x%08x",
-							(char *)hdr->cmdline,
-							serialnr.high,
-							serialnr.low);
-			commandline = appended_cmd_line;
+	cmdline = getenv("bootargs");
+	cmdline_mode = getenv("bootargs_mode");
+	if (NULL != cmdline && NULL != cmdline_mode) {
+		if (0 == strncmp(cmdline_mode, CMDLINE_APPEND,
+			CMDLINE_APPEND_LEN)) {
+			snprintf(cmdline_buf, ARRAY_SIZE(cmdline_buf), "%s %s",
+				(char *)hdr->cmdline, cmdline);
+		} else if (0 == strncmp(cmdline_mode, CMDLINE_OVERWRITE,
+			CMDLINE_OVERWRITE_LEN)) {
+			strncpy(cmdline_buf, cmdline, COMMAND_LINE_SIZE);
 		} else {
-			printf("Cannot append androidboot.serialno\n");
+			strncpy(cmdline_buf, (char *)hdr->cmdline,
+				COMMAND_LINE_SIZE);
 		}
-
-		setenv("bootargs", commandline);
-#endif
+	} else {
+		strncpy(cmdline_buf, (char *)hdr->cmdline, COMMAND_LINE_SIZE);
 	}
-
-	/* XXX: in production, you should always use boot.img 's cmdline !!! */
-	printf("kernel cmdline:\n");
-	printf("\tuse boot.img ");
-	printf("command line:\n\t%s\n", commandline);
-#endif /*CONFIG_CMDLINE_TAG*/
+	cmdline_buf[ARRAY_SIZE(cmdline_buf) - 1] = '\0';
+#ifdef CONFIG_SERIAL_TAG
+	get_board_serial(&serialnr);
+	cmdline_len = strnlen(cmdline_buf, ARRAY_SIZE(cmdline_buf));
+	if (ARRAY_SIZE(cmdline_buf) > cmdline_len) {
+		snprintf(&cmdline_buf[cmdline_len],
+			ARRAY_SIZE(cmdline_buf) - cmdline_len,
+			" androidboot.serialno=%08x%08x", serialnr.high,
+			serialnr.low);
+		cmdline_buf[ARRAY_SIZE(cmdline_buf) - 1] = '\0';
+	}
+#endif /* CONFIG_SERIAL_TAG */
+	setenv("bootargs", cmdline_buf);
+	printf("kernel cmdline: '%s'\n", cmdline_buf);
+#endif /* CONFIG_CMDLINE_TAG */
 
 	memset(&images, 0, sizeof(images));
 
